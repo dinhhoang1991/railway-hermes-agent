@@ -42,11 +42,11 @@ cat > "$GENERATED" <<EOF
           Bạn có các tool sau:
           1. send_telegram — gửi cảnh báo qua Telegram
           2. run_opencv_detect — chạy script OpenCV phát hiện bất thường
-          3. get_sensor_data / list_sensors / update_sensor_data — đọc & cập nhật dữ liệu cảm biến (HTTP)
-          4. get_sensor_data / list_sensors / check_sensor_threshold — đọc cảm biến qua MQTT + kiểm tra ngưỡng
+          3. http_update_sensor_data / http_get_sensor_data / http_list_sensors — đọc & cập nhật dữ liệu cảm biến (HTTP cache)
+          4. mqtt_get_sensor_data / mqtt_list_sensors / mqtt_check_sensor_threshold — đọc cảm biến qua MQTT + kiểm tra ngưỡng
 
           Quy trình giám sát khuyến nghị:
-          1. Kiểm tra cảm biến (list_sensors hoặc get_sensor_data).
+          1. Kiểm tra cảm biến (mqtt_list_sensors hoặc mqtt_get_sensor_data); nếu chưa có MQTT thì dùng http_*.
           2. Nếu vượt ngưỡng (ví dụ độ nghiêng > 8 độ) → gửi Telegram ngay.
           3. Có thể gọi run_opencv_detect để kiểm tra camera khu vực đó.
           4. Trả lời rõ ràng: cảm biến nào, giá trị bao nhiêu, đã cảnh báo chưa.

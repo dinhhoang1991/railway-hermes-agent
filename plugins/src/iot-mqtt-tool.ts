@@ -6,12 +6,11 @@ export const name = 'iot-mqtt-tool'
 export const inject = ['tools']
 
 const latestData: Record<string, any> = {}
-let client: mqtt.MqttClient | null = null
 
 export function apply(ctx: Context) {
   const brokerUrl = process.env.MQTT_BROKER_URL || 'mqtt://127.0.0.1:1883'
 
-  client = mqtt.connect(brokerUrl, {
+  const client = mqtt.connect(brokerUrl, {
     username: process.env.MQTT_USERNAME || undefined,
     password: process.env.MQTT_PASSWORD || undefined,
     reconnectPeriod: 5000,
@@ -19,7 +18,7 @@ export function apply(ctx: Context) {
 
   client.on('connect', () => {
     console.log('[MQTT] Connected to', brokerUrl)
-    client?.subscribe('railway/sensors/#', (err) => {
+    client.subscribe('railway/sensors/#', (err) => {
       if (err) console.error('[MQTT] Subscribe error:', err)
     })
   })
@@ -42,8 +41,12 @@ export function apply(ctx: Context) {
     console.error('[MQTT] Error:', err.message)
   })
 
+  ctx.effect(() => () => {
+    client.end(true)
+  }, 'iot-mqtt-tool: close MQTT client')
+
   ctx.tools.register(defineTool({
-    name: 'get_sensor_data',
+    name: 'mqtt_get_sensor_data',
     description: 'Lấy dữ liệu mới nhất từ cảm biến IoT qua MQTT',
     parameters: {
       sensor_id: {
@@ -66,7 +69,7 @@ export function apply(ctx: Context) {
   }))
 
   ctx.tools.register(defineTool({
-    name: 'list_sensors',
+    name: 'mqtt_list_sensors',
     description: 'Liệt kê tất cả cảm biến đang gửi dữ liệu qua MQTT',
     parameters: {},
     output: {
@@ -84,7 +87,7 @@ export function apply(ctx: Context) {
   }))
 
   ctx.tools.register(defineTool({
-    name: 'check_sensor_threshold',
+    name: 'mqtt_check_sensor_threshold',
     description: 'Kiểm tra cảm biến có vượt ngưỡng không. Trả về true/false + dữ liệu',
     parameters: {
       sensor_id: { type: 'string', required: true },

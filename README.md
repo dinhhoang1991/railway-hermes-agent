@@ -1,12 +1,12 @@
 # Railway Hermes Agent + DeepSeek Harness
 
-Agent lập trình thông minh hỗ trợ hệ thống giám sát an toàn đường sắt (Hermes), sử dụng **DeepSeek Harness v0.1** + **DeepSeek-V4-Pro**.
+Agent lập trình thông minh hỗ trợ hệ thống giám sát an toàn đường sắt (Hermes), sử dụng **DeepSeek Harness** + **DeepSeek-V4-Pro**.
 
 ## Tính năng chính
 
 - Coding agent chuyên biệt cho hệ thống đường sắt (OpenCV phát hiện sạt lở / chuyển động, IoT, Telegram)
-- Custom tool: `send_telegram` và `run_opencv_detect`
-- Python SDK runner có thể chạy thủ công hoặc theo lịch
+- Custom tool: `send_telegram`, `run_opencv_detect`, `http_*` (cache cảm biến), `mqtt_*` (cảm biến real-time)
+- Python SDK runner chạy thủ công hoặc theo lịch
 - System prompt tối ưu cho ngữ cảnh Việt Nam (Cam Ranh - Khánh Hòa)
 
 ## Yêu cầu
@@ -15,6 +15,7 @@ Agent lập trình thông minh hỗ trợ hệ thống giám sát an toàn đư�
 - Python 3.10+
 - DeepSeek API Key
 - (Khuyến nghị) Telegram Bot Token + Chat ID
+- (Tùy chọn) MQTT broker cho dữ liệu cảm biến real-time
 
 ## Cài đặt nhanh
 
@@ -42,51 +43,67 @@ cp .env.example .env
 
 ## Cấu hình đường dẫn tuyệt đối (quan trọng)
 
-DeepSeek Harness yêu cầu đường dẫn tuyệt đối trong file patch.
+DeepSeek Harness yêu cầu đường dẫn tuyệt đối trong file patch (overlay) để tìm được các tool plugin.
 
-Chạy script sau để tự động tạo file cấu hình đúng:
+Chạy script sau để tự động tạo file cấu hình đã điền đường dẫn thật:
 
 ```bash
-bash scripts/generate-config.sh
+bash generate-config.sh
 ```
 
-Script này sẽ tạo:
-- `configs/generated-railway.cordis.yml` (đã điền đường dẫn thật)
+Script này kiểm tra 4 file tool trong `plugins/src/` rồi tạo:
+
+- `configs/generated-railway.cordis.yml` (patch-list đã điền đường dẫn tuyệt đối)
+
+## Các tool
+
+| Tool | File plugin | Chức năng |
+| --- | --- | --- |
+| `send_telegram` | `plugins/src/telegram-tool.ts` | Gửi cảnh báo/thông báo qua Telegram (hỗ trợ HTML) |
+| `run_opencv_detect` | `plugins/src/opencv-tool.ts` | Chạy script Python OpenCV phát hiện sạt lở / chuyển động |
+| `http_update_sensor_data` / `http_get_sensor_data` / `http_list_sensors` | `plugins/src/iot-http-tool.ts` | Cache cảm biến trong bộ nhớ (nạp thủ công khi chưa có MQTT) |
+| `mqtt_get_sensor_data` / `mqtt_list_sensors` / `mqtt_check_sensor_threshold` | `plugins/src/iot-mqtt-tool.ts` | Đọc cảm biến real-time qua MQTT + kiểm tra ngưỡng |
 
 ## Chạy Web UI (dễ debug)
 
 ```bash
+# Sinh config đã điền đường dẫn thật (nếu chưa chạy)
+bash generate-config.sh
+
 cd deepseek-harness
 pnpm dsh web --patch ../configs/generated-railway.cordis.yml
 ```
 
 Mở http://127.0.0.1:3080 → chọn model `deepseek-v4-pro`.
 
+Để kiểm tra end-to-end, bạn có thể hỏi agent: *"Hãy liệt kê các cảm biến đang online"* (gọi `mqtt_list_sensors`), hoặc *"Cập nhật cảm biến cam-ranh-01 độ nghiêng 12 độ rồi kiểm tra có vượt ngưỡng không"* (gọi `http_update_sensor_data` + `mqtt_check_sensor_threshold`).
+
 ## Chạy bằng Python SDK
 
 ```bash
 source .venv/bin/activate
-python hermes_agent_runner.py
+python hermes_agent_runner.py "Nhiệm vụ của bạn"
 ```
+
+Không truyền tham số thì runner dùng task mặc định (cải thiện `detect_landslide.py`).
 
 ## Cấu trúc thư mục
 
 ```
 railway-hermes-agent/
 ├── configs/
-│   └── railway-coding.cordis.yml      # template
+│   └── railway-coding.cordis.yml      # template config (system prompt + đăng ký tool)
 ├── plugins/
-│   ├── cordis.yml
 │   └── src/
 │       ├── telegram-tool.ts
-│       └── opencv-tool.ts
-├── examples/
-│   └── detect_landslide.py            # script OpenCV mẫu
-├── hermes_agent_runner.py
+│       ├── opencv-tool.ts
+│       ├── iot-http-tool.ts
+│       └── iot-mqtt-tool.ts
+├── detect_landslide.py                # script OpenCV mẫu
+├── hermes_agent_runner.py             # Python SDK runner
+├── generate-config.sh                 # sinh configs/generated-railway.cordis.yml
 ├── requirements.txt
-├── .env.example
-└── scripts/
-    └── generate-config.sh
+└── .env.example
 ```
 
 ## Biến môi trường (.env)
@@ -95,6 +112,15 @@ railway-hermes-agent/
 DEEPSEEK_API_KEY=sk-...
 TELEGRAM_BOT_TOKEN=123456:ABC...
 TELEGRAM_CHAT_ID=-100xxxxxxxxxx
+MQTT_BROKER_URL=mqtt://127.0.0.1:1883
+# MQTT_USERNAME=
+# MQTT_PASSWORD=
+```
+
+Tool MQTT subscribe topic `railway/sensors/#`; mỗi message gửi lên là JSON có ít nhất `sensor_id` và `value`, ví dụ:
+
+```json
+{"sensor_id": "cam-ranh-01", "type": "tilt", "value": 8.5, "unit": "deg"}
 ```
 
 ## Ghi chú quan trọng
@@ -102,6 +128,7 @@ TELEGRAM_CHAT_ID=-100xxxxxxxxxx
 - Đây là phiên bản Developer Preview của DeepSeek Harness → có thể có breaking change.
 - Nên chạy agent trong thư mục workspace riêng (không phải production data).
 - Tool OpenCV gọi script Python của bạn qua `python3`. Đảm bảo script nhận tham số `--image`.
+- `configs/railway-coding.cordis.yml` là template; đừng chỉnh trực tiếp `configs/generated-railway.cordis.yml` vì `generate-config.sh` sẽ ghi đè.
 
 ## Tác giả & Mục đích
 
