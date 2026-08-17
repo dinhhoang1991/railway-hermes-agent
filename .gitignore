@@ -8,6 +8,7 @@ __pycache__/
 
 # Generated
 configs/generated-railway.cordis.yml
+configs/generated-railway-sdk.cordis.yml
 sessions/
 *.log
 
@@ -19,3 +20,4 @@ sessions/
 
 # Node
 node_modules/
+plugins/node_modules/

@@ -36,7 +36,10 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# 4. Cấu hình môi trường
+# 4. Cài dependency cho tool plugin (mqtt cho iot-mqtt-tool)
+cd plugins && npm install && cd ..
+
+# 5. Cấu hình môi trường
 cp .env.example .env
 # Sửa file .env với API key thật
 ```
@@ -51,9 +54,10 @@ Chạy script sau để tự động tạo file cấu hình đã điền đườ
 bash generate-config.sh
 ```
 
-Script này kiểm tra 4 file tool trong `plugins/src/` rồi tạo:
+Script này kiểm tra 4 file tool trong `plugins/src/` rồi tạo 2 file config:
 
-- `configs/generated-railway.cordis.yml` (patch-list đã điền đường dẫn tuyệt đối)
+- `configs/generated-railway.cordis.yml` — **patch-list** cho `dsh web --patch` / `dsh --profile headless --patch`
+- `configs/generated-railway-sdk.cordis.yml` — **plain entry list** cho Python SDK runner (`cordis=...`)
 
 ## Các tool
 
@@ -85,15 +89,17 @@ source .venv/bin/activate
 python hermes_agent_runner.py "Nhiệm vụ của bạn"
 ```
 
-Không truyền tham số thì runner dùng task mặc định (cải thiện `detect_landslide.py`).
+Runner dùng `configs/generated-railway-sdk.cordis.yml` (đã được `generate-config.sh` sinh), cấu hình plain-list cho runtime bundled `dsh-jsonrpc-agent`. Không truyền tham số thì runner dùng task mặc định (cải thiện `detect_landslide.py`).
 
 ## Cấu trúc thư mục
 
 ```
 railway-hermes-agent/
 ├── configs/
-│   └── railway-coding.cordis.yml      # template config (system prompt + đăng ký tool)
+│   ├── railway-coding.cordis.yml          # template config (system prompt + đăng ký tool)
+│   └── generated-railway*.cordis.yml      # sinh bởi generate-config.sh (gitignored)
 ├── plugins/
+│   ├── package.json                       # dependency mqtt cho tool plugin
 │   └── src/
 │       ├── telegram-tool.ts
 │       ├── opencv-tool.ts
@@ -101,7 +107,7 @@ railway-hermes-agent/
 │       └── iot-mqtt-tool.ts
 ├── detect_landslide.py                # script OpenCV mẫu
 ├── hermes_agent_runner.py             # Python SDK runner
-├── generate-config.sh                 # sinh configs/generated-railway.cordis.yml
+├── generate-config.sh                 # sinh configs/generated-railway*.cordis.yml
 ├── requirements.txt
 └── .env.example
 ```
@@ -128,7 +134,9 @@ Tool MQTT subscribe topic `railway/sensors/#`; mỗi message gửi lên là JSON
 - Đây là phiên bản Developer Preview của DeepSeek Harness → có thể có breaking change.
 - Nên chạy agent trong thư mục workspace riêng (không phải production data).
 - Tool OpenCV gọi script Python của bạn qua `python3`. Đảm bảo script nhận tham số `--image`.
-- `configs/railway-coding.cordis.yml` là template; đừng chỉnh trực tiếp `configs/generated-railway.cordis.yml` vì `generate-config.sh` sẽ ghi đè.
+- Tool plugin cần dependency npm: chạy `cd plugins && npm install` (hiện chỉ cần `mqtt`).
+- Python SDK runner dùng runtime bundled `dsh-jsonrpc-agent` (gói `deepseek-harness-runtime-bin`). Runtime này cần native modules (node-pty) đúng platform; nếu boot báo lỗi native module, hãy cài bản runtime wheel khớp platform của máy, hoặc chạy qua giao diện Web/headless (đường dẫn source đã `pnpm run build`).
+- `configs/railway-coding.cordis.yml` là template; đừng chỉnh trực tiếp `configs/generated-railway*.cordis.yml` vì `generate-config.sh` sẽ ghi đè.
 
 ## Tác giả & Mục đích
 

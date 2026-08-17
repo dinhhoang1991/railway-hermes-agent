@@ -1,0 +1,8 @@
+{
+  "name": "railway-hermes-agent-plugins",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "mqtt": "^5.10.0"
+  }
+}

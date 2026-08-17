@@ -20,12 +20,10 @@ export function apply(ctx: Context) {
       },
       image_path: {
         type: 'string',
-        required: false,
         description: 'Đường dẫn tới ảnh cần phân tích'
       },
       extra_args: {
         type: 'string',
-        required: false,
         description: 'Các tham số bổ sung truyền cho script (ví dụ: --threshold 0.65 --save-result)'
       }
     },

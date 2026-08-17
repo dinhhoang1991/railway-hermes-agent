@@ -13,9 +13,9 @@ export function apply(ctx: Context) {
     parameters: {
       sensor_id: { type: 'string', required: true, description: 'ID cảm biến' },
       value: { type: 'number', required: true, description: 'Giá trị đo được' },
-      type: { type: 'string', required: false, description: 'Loại cảm biến (tilt, vibration, water...)' },
-      unit: { type: 'string', required: false, description: 'Đơn vị' },
-      extra: { type: 'string', required: false, description: 'Thông tin thêm (chuỗi JSON hợp lệ)' },
+      type: { type: 'string', description: 'Loại cảm biến (tilt, vibration, water...)' },
+      unit: { type: 'string', description: 'Đơn vị' },
+      extra: { type: 'string', description: 'Thông tin thêm (chuỗi JSON hợp lệ)' },
     },
     output: {
       schema: { type: 'string' },

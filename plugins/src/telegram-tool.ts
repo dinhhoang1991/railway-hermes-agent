@@ -16,12 +16,10 @@ export function apply(ctx: Context) {
       },
       chat_id: {
         type: 'string',
-        required: false,
         description: 'Chat ID (nếu không truyền sẽ lấy từ biến môi trường TELEGRAM_CHAT_ID)'
       },
       parse_mode: {
         type: 'string',
-        required: false,
         description: 'HTML hoặc Markdown. Mặc định HTML',
         default: 'HTML'
       }

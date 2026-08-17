@@ -32,10 +32,10 @@ WORKSPACE = Path(os.getenv("HERMES_WORKSPACE", BASE_DIR / "examples")).resolve()
 SESSIONS = Path(os.getenv("HERMES_SESSIONS", BASE_DIR / "sessions")).resolve()
 SESSIONS.mkdir(parents=True, exist_ok=True)
 
-# File cấu hình đã được generate
+# File cấu hình đã được generate (bản plain-list cho Python SDK)
 CONFIG = Path(os.getenv(
     "HERMES_CONFIG",
-    BASE_DIR / "configs" / "generated-railway.cordis.yml"
+    BASE_DIR / "configs" / "generated-railway-sdk.cordis.yml"
 )).resolve()
 
 MODEL = os.getenv("DSH_MODEL", "deepseek-v4-pro")
@@ -43,7 +43,7 @@ MAX_TOKENS = int(os.getenv("DSH_MAX_TOKENS", "49152"))
 
 
 DEFAULT_TASK = """
-Hãy kiểm tra script examples/detect_landslide.py và cải thiện nó:
+Hãy kiểm tra script detect_landslide.py và cải thiện nó:
 
 1. Thêm xử lý lỗi tốt hơn khi không đọc được ảnh.
 2. Thêm logging rõ ràng (thời gian, thông số).
@@ -59,7 +59,7 @@ def run_agent(task: str, session_id: str | None = None) -> str:
     if not CONFIG.exists():
         raise FileNotFoundError(
             f"Không tìm thấy file cấu hình: {CONFIG}\n"
-            "Hãy chạy: bash scripts/generate-config.sh"
+            "Hãy chạy: bash generate-config.sh"
         )
 
     if session_id is None:

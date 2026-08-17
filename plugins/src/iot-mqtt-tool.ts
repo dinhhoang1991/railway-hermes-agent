@@ -94,7 +94,6 @@ export function apply(ctx: Context) {
       threshold: { type: 'number', required: true, description: 'Ngưỡng cảnh báo' },
       operator: {
         type: 'string',
-        required: false,
         description: 'gt (lớn hơn) hoặc lt (nhỏ hơn). Mặc định gt',
         default: 'gt',
       },
