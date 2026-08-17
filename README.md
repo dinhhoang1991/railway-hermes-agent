@@ -68,6 +68,25 @@ Script này kiểm tra 4 file tool trong `plugins/src/` rồi tạo 2 file confi
 | `http_update_sensor_data` / `http_get_sensor_data` / `http_list_sensors` | `plugins/src/iot-http-tool.ts` | Cache cảm biến trong bộ nhớ (nạp thủ công khi chưa có MQTT) |
 | `mqtt_get_sensor_data` / `mqtt_list_sensors` / `mqtt_check_sensor_threshold` | `plugins/src/iot-mqtt-tool.ts` | Đọc cảm biến real-time qua MQTT + kiểm tra ngưỡng |
 
+## Script OpenCV: detect_landslide.py
+
+Script phát hiện chuyển động / sạt lở **thật** (frame differencing + contour), 3 chế độ:
+
+```bash
+# 1. Phát hiện chuyển động trên video (camera)
+python detect_landslide.py --video cam.mp4 --threshold 25 --min-area 500
+
+# 2. Phát hiện thay đổi so với ảnh tham chiếu (đất đá tràn lấp, vật thể mới)
+python detect_landslide.py --image now.jpg --reference baseline.jpg
+
+# 3. Ảnh đơn (thống kê; không đủ kết luận chuyển động)
+python detect_landslide.py --image now.jpg
+```
+
+Tham số hữu ích: `--roi "x1,y1;x2,y2;..."` (giới hạn vùng quan tâm, ví dụ chỉ đường ray), `--annotate out.jpg` (ghi ảnh/video đánh dấu vùng phát hiện), `--max-frames N` (video dài).
+
+Kết quả trả về là JSON có `mode`, `detected`, `severity` (`none`/`low`/`medium`/`high`) và `message` — agent đọc các trường này để quyết định cảnh báo.
+
 ## Chạy Web UI (dễ debug)
 
 ```bash
@@ -133,7 +152,7 @@ Tool MQTT subscribe topic `railway/sensors/#`; mỗi message gửi lên là JSON
 
 - Đây là phiên bản Developer Preview của DeepSeek Harness → có thể có breaking change.
 - Nên chạy agent trong thư mục workspace riêng (không phải production data).
-- Tool OpenCV gọi script Python của bạn qua `python3`. Đảm bảo script nhận tham số `--image`.
+- Tool OpenCV gọi script Python của bạn qua `python3`. `detect_landslide.py` nhận `--image` (ảnh đơn), `--video` (chuyển động) hoặc `--image` + `--reference` (phát hiện thay đổi); các tham số khác truyền qua `extra_args`.
 - Tool plugin cần dependency npm: chạy `cd plugins && npm install` (hiện chỉ cần `mqtt`).
 - Python SDK runner dùng runtime bundled `dsh-jsonrpc-agent` (gói `deepseek-harness-runtime-bin`). Runtime này cần native modules (node-pty) đúng platform; nếu boot báo lỗi native module, hãy cài bản runtime wheel khớp platform của máy, hoặc chạy qua giao diện Web/headless (đường dẫn source đã `pnpm run build`).
 - `configs/railway-coding.cordis.yml` là template; đừng chỉnh trực tiếp `configs/generated-railway*.cordis.yml` vì `generate-config.sh` sẽ ghi đè.
