@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Railway Hermes Dashboard — Giám sát an toàn đường sắt</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🚆</span>
+      <div>
+        <h1>Railway Hermes Dashboard</h1>
+        <p class="sub">Giám sát an toàn đường sắt · Cam Ranh — Khánh Hòa</p>
+      </div>
+    </div>
+    <div class="status">
+      <span id="health" class="badge">…</span>
+      <span id="clock" class="clock"></span>
+      <button id="refresh" title="Làm mới ngay">⟳</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="summary" class="summary">
+      <div class="stat"><span id="stat-sensors" class="num">0</span><span class="label">Cảm biến online</span></div>
+      <div class="stat"><span id="stat-alerting" class="num">0</span><span class="label">Đang vượt ngưỡng</span></div>
+      <div class="stat"><span id="stat-alerts" class="num">0</span><span class="label">Cảnh báo (24h)</span></div>
+      <div class="stat"><span id="stat-detections" class="num">0</span><span class="label">Phát hiện bất thường</span></div>
+    </section>
+
+    <div class="grid">
+      <section class="panel" id="sensors-panel">
+        <h2>Cảm biến <span class="hint">tự cập nhật 3s · nguồn: MQTT / API</span></h2>
+        <div id="sensors" class="cards"></div>
+      </section>
+
+      <div class="col">
+        <section class="panel">
+          <h2>⚠️ Cảnh báo gần đây</h2>
+          <ul id="alerts" class="feed"></ul>
+        </section>
+        <section class="panel">
+          <h2>🔍 Phát hiện (OpenCV)</h2>
+          <ul id="detections" class="feed"></ul>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer>Railway Hermes Agent · dữ liệu demo và thật qua MQTT/API</footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

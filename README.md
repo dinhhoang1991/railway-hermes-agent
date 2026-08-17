@@ -87,6 +87,20 @@ Tham số hữu ích: `--roi "x1,y1;x2,y2;..."` (giới hạn vùng quan tâm, v
 
 Kết quả trả về là JSON có `mode`, `detected`, `severity` (`none`/`low`/`medium`/`high`) và `message` — agent đọc các trường này để quyết định cảnh báo.
 
+## Dashboard Web UI (giám sát trực quan)
+
+Dashboard độc lập (chỉ dùng thư viện chuẩn Python) hiển thị: cảm biến real-time (kèm sparkline), cảnh báo gần đây, kết quả phát hiện OpenCV.
+
+```bash
+# Chạy dashboard (cổng 8080); tự nạp cảm biến từ MQTT nếu cài amqtt
+python dashboard/server.py --port 8080 --mqtt mqtt://127.0.0.1:1883
+# Mở http://127.0.0.1:8080
+```
+
+- REST API: `GET/POST /api/sensors`, `/api/alerts`, `/api/detections`, `GET /api/health`.
+- Nạp MQTT cần `pip install amqtt` (tùy chọn); thiếu amqtt thì dashboard vẫn chạy qua REST.
+- Tích hợp agent: nếu đặt biến `DASHBOARD_URL` (ví dụ `http://127.0.0.1:8080`), tool `http_update_sensor_data` sẽ tự POST dữ liệu lên dashboard.
+
 ## Chạy Web UI (dễ debug)
 
 ```bash
@@ -125,6 +139,9 @@ railway-hermes-agent/
 │       ├── iot-http-tool.ts
 │       └── iot-mqtt-tool.ts
 ├── detect_landslide.py                # script OpenCV mẫu
+├── dashboard/                         # Dashboard Web UI (server + static)
+│   ├── server.py
+│   └── static/
 ├── hermes_agent_runner.py             # Python SDK runner
 ├── generate-config.sh                 # sinh configs/generated-railway*.cordis.yml
 ├── requirements.txt
@@ -140,6 +157,7 @@ TELEGRAM_CHAT_ID=-100xxxxxxxxxx
 MQTT_BROKER_URL=mqtt://127.0.0.1:1883
 # MQTT_USERNAME=
 # MQTT_PASSWORD=
+# DASHBOARD_URL=http://127.0.0.1:8080
 ```
 
 Tool MQTT subscribe topic `railway/sensors/#`; mỗi message gửi lên là JSON có ít nhất `sensor_id` và `value`, ví dụ:

@@ -6,6 +6,21 @@ export const inject = ['tools']
 
 const sensorCache: Record<string, any> = {}
 
+/** Đồng bộ 1 lần đo lên dashboard (nếu có DASHBOARD_URL); lỗi dashboard không ảnh hưởng tool. */
+async function syncToDashboard(payload: Record<string, unknown>): Promise<void> {
+  const base = process.env.DASHBOARD_URL
+  if (!base) return
+  try {
+    await fetch(`${base}/api/sensors`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch (error: any) {
+    console.error(`[iot-http-tool] Dashboard sync failed: ${error.message || String(error)}`)
+  }
+}
+
 export function apply(ctx: Context) {
   ctx.tools.register(defineTool({
     name: 'http_update_sensor_data',
@@ -39,6 +54,13 @@ export function apply(ctx: Context) {
         extra,
         updated_at: new Date().toISOString(),
       }
+      void syncToDashboard({
+        sensor_id: args.sensor_id,
+        value: args.value,
+        type: args.type || 'unknown',
+        unit: args.unit || '',
+        extra,
+      })
       return `Đã cập nhật cảm biến ${args.sensor_id}: ${args.value}`
     },
   }))

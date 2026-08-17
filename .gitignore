@@ -10,6 +10,7 @@ __pycache__/
 configs/generated-railway.cordis.yml
 configs/generated-railway-sdk.cordis.yml
 sessions/
+dashboard/data/
 *.log
 
 # OS / IDE
