@@ -1,0 +1,19 @@
+[Unit]
+Description=Railway Hermes Auto Monitor (cảnh báo tự động giám sát đường sắt)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Sửa 2 đường dẫn dưới cho khớp máy triển khai:
+WorkingDirectory=/path/to/railway-hermes-agent
+ExecStart=/path/to/railway-hermes-agent/.venv/bin/python auto_monitor.py --interval 30
+Restart=always
+RestartSec=5
+
+# An toàn tối thiểu (tuỳ chọn): chạy dưới user riêng
+# User=hermes
+# Group=hermes
+
+[Install]
+WantedBy=multi-user.target

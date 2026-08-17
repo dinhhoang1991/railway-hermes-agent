@@ -115,6 +115,37 @@ python telegram_bot.py
 - **Bảo mật:** mặc định chỉ chủ sở hữu (`TELEGRAM_CHAT_ID`) được ra lệnh; bot trong group phải đặt `ALLOWED_USER_IDS="id1,id2"` trong `.env`
 - Biến cấu hình: `HARNESS_DIR` (thư mục deepseek-harness), `HARNESS_CONFIG` (config patch), `BOT_POLL_INTERVAL`, `AGENT_TIMEOUT`
 
+## Vòng cảnh báo tự động (24/7)
+
+`auto_monitor.py` chạy định kỳ: đọc cảm biến (từ dashboard, nơi đã nạp MQTT) → so ngưỡng → khi vượt: chạy `detect_landslide.py` (nếu có camera) → gửi Telegram → ghi cảnh báo/kết quả lên dashboard. Có **cooldown** chống gửi trùng.
+
+Thiết kế deterministic (không gọi LLM) để nhanh + đáng tin cậy; agent AI dùng khi cần phân tích theo lệnh (bot Telegram).
+
+```bash
+# Kiểm tra 1 lần (thử nghiệm)
+python auto_monitor.py --once
+
+# Chạy liên tục, mỗi 30 giây
+python auto_monitor.py --interval 30
+```
+
+**Cách 1 — cron (one-shot mỗi phút):**
+```bash
+crontab -e
+# Thêm dòng:
+* * * * * cd /path/to/railway-hermes-agent && .venv/bin/python auto_monitor.py --once >> monitor.log 2>&1
+```
+
+**Cách 2 — systemd (chạy thường trực, tự khởi động lại):**
+```bash
+sudo cp deploy/railway-hermes-monitor.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now railway-hermes-monitor
+systemctl status railway-hermes-monitor
+```
+
+**Yêu cầu trước khi chạy:** dashboard đang chạy (nguồn dữ liệu) + có `DASHBOARD_URL`, `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` trong `.env`. Biến cấu hình: `MONITOR_THRESHOLDS` (JSON ngưỡng theo loại), `MONITOR_COOLDOWN`, `CAMERA_IMAGE`/`CAMERA_REFERENCE` (để auto-detect khi vượt ngưỡng), `DETECT_PYTHON`.
+
 ## Chạy Web UI (dễ debug)
 
 ```bash
@@ -158,6 +189,8 @@ railway-hermes-agent/
 │   └── static/
 ├── hermes_agent_runner.py             # Python SDK runner
 ├── telegram_bot.py                    # Telegram bot: ra lệnh từ xa + trả lời
+├── auto_monitor.py                    # vòng cảnh báo tự động (cron/systemd)
+├── deploy/railway-hermes-monitor.service
 ├── generate-config.sh                 # sinh configs/generated-railway*.cordis.yml
 ├── requirements.txt
 └── .env.example
