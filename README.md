@@ -101,6 +101,20 @@ python dashboard/server.py --port 8080 --mqtt mqtt://127.0.0.1:1883
 - Nạp MQTT cần `pip install amqtt` (tùy chọn); thiếu amqtt thì dashboard vẫn chạy qua REST.
 - Tích hợp agent: nếu đặt biến `DASHBOARD_URL` (ví dụ `http://127.0.0.1:8080`), tool `http_update_sensor_data` sẽ tự POST dữ liệu lên dashboard.
 
+## Telegram Bot (ra lệnh từ xa)
+
+Gửi lệnh tiếng Việt tự nhiên cho bot → agent chạy → trả lời lại trong Telegram.
+
+```bash
+python telegram_bot.py
+```
+
+- Nhắn bất kỳ lệnh nào: *"kiểm tra cảm biến"*, *"cập nhật cảm biến cam-ranh-01 độ nghiêng 12 độ"*, *"chạy detect ảnh ..."*
+- `/status` — trạng thái cảm biến nhanh (qua dashboard REST, nếu có `DASHBOARD_URL`)
+- `/help` — hướng dẫn
+- **Bảo mật:** mặc định chỉ chủ sở hữu (`TELEGRAM_CHAT_ID`) được ra lệnh; bot trong group phải đặt `ALLOWED_USER_IDS="id1,id2"` trong `.env`
+- Biến cấu hình: `HARNESS_DIR` (thư mục deepseek-harness), `HARNESS_CONFIG` (config patch), `BOT_POLL_INTERVAL`, `AGENT_TIMEOUT`
+
 ## Chạy Web UI (dễ debug)
 
 ```bash
@@ -143,6 +157,7 @@ railway-hermes-agent/
 │   ├── server.py
 │   └── static/
 ├── hermes_agent_runner.py             # Python SDK runner
+├── telegram_bot.py                    # Telegram bot: ra lệnh từ xa + trả lời
 ├── generate-config.sh                 # sinh configs/generated-railway*.cordis.yml
 ├── requirements.txt
 └── .env.example
