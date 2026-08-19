@@ -2,6 +2,18 @@
 
 Agent lập trình thông minh hỗ trợ hệ thống giám sát an toàn đường sắt (Hermes), sử dụng **DeepSeek Harness** + **DeepSeek-V4-Pro**.
 
+## Sơ đồ tổng quan
+
+```
+[Cảm biến IoT] ──MQTT──▶ [MQTT Broker] ──▶ [Dashboard] ──▶ [auto_monitor] ──▶ [Telegram cảnh báo]
+                                 ▲                                   │
+[Camera] ──▶ [detect_landslide.py (OpenCV)] ◀───────────────────────┘
+                                 ▲
+                           [AI Agent (4 tool)] ◀── lệnh tiếng Việt ── [Telegram Bot] ◀── bạn
+```
+
+📚 **Tài liệu:** [Kiến trúc hệ thống](docs/ARCHITECTURE.md) · [Hướng dẫn triển khai](docs/DEPLOYMENT.md)
+
 ## Tính năng chính
 
 - Coding agent chuyên biệt cho hệ thống đường sắt (OpenCV phát hiện sạt lở / chuyển động, IoT, Telegram)
@@ -222,6 +234,11 @@ Tool MQTT subscribe topic `railway/sensors/#`; mỗi message gửi lên là JSON
 - Tool plugin cần dependency npm: chạy `cd plugins && npm install` (hiện chỉ cần `mqtt`).
 - Python SDK runner dùng runtime bundled `dsh-jsonrpc-agent` (gói `deepseek-harness-runtime-bin`). Runtime này cần native modules (node-pty) đúng platform; nếu boot báo lỗi native module, hãy cài bản runtime wheel khớp platform của máy, hoặc chạy qua giao diện Web/headless (đường dẫn source đã `pnpm run build`).
 - `configs/railway-coding.cordis.yml` là template; đừng chỉnh trực tiếp `configs/generated-railway*.cordis.yml` vì `generate-config.sh` sẽ ghi đè.
+
+## Trạng thái dự án
+
+- ✅ **Phần mềm hoàn chỉnh & kiểm chứng chạy thật**: agent, 4 tool, OpenCV (3 chế độ), dashboard, bot Telegram, vòng cảnh báo tự động — 11 commit trên `main`.
+- ⚠️ **Dữ liệu đầu vào hiện là giả lập** (chưa có phần cứng): để thành giám sát thật chỉ cần cắm cảm biến IoT publish MQTT đúng format + camera thật — không cần sửa code. Xem [Hướng dẫn triển khai → Kết nối phần cứng](docs/DEPLOYMENT.md#6-kết-nối-phần-cứng-dữ-liệu-thật).
 
 ## Tác giả & Mục đích
 
