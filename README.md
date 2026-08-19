@@ -82,20 +82,23 @@ Script này kiểm tra 4 file tool trong `plugins/src/` rồi tạo 2 file confi
 
 ## Script OpenCV: detect_landslide.py
 
-Script phát hiện chuyển động / sạt lở **thật** (frame differencing + contour), 3 chế độ:
+Script phát hiện chuyển động / sạt lở **thật** (frame differencing + contour), 4 chế độ:
 
 ```bash
-# 1. Phát hiện chuyển động trên video (camera)
+# 1. Camera trực tiếp (RTSP / webcam) — vừa phát hiện chuyển động vừa so baseline
+python detect_landslide.py --camera rtsp://user:pass@host/stream --duration 30 --reference baseline.jpg
+
+# 2. Phát hiện chuyển động trên video
 python detect_landslide.py --video cam.mp4 --threshold 25 --min-area 500
 
-# 2. Phát hiện thay đổi so với ảnh tham chiếu (đất đá tràn lấp, vật thể mới)
+# 3. Phát hiện thay đổi so với ảnh tham chiếu (đất đá tràn lấp, vật thể mới)
 python detect_landslide.py --image now.jpg --reference baseline.jpg
 
-# 3. Ảnh đơn (thống kê; không đủ kết luận chuyển động)
+# 4. Ảnh đơn (thống kê; không đủ kết luận chuyển động)
 python detect_landslide.py --image now.jpg
 ```
 
-Tham số hữu ích: `--roi "x1,y1;x2,y2;..."` (giới hạn vùng quan tâm, ví dụ chỉ đường ray), `--annotate out.jpg` (ghi ảnh/video đánh dấu vùng phát hiện), `--max-frames N` (video dài).
+Tham số hữu ích: `--roi "x1,y1;x2,y2;..."` (giới hạn vùng quan tâm, ví dụ chỉ đường ray), `--annotate out.jpg` (ghi ảnh/video đánh dấu vùng phát hiện), `--max-frames N` (video dài), `--duration` + `--baseline-interval` (camera).
 
 Kết quả trả về là JSON có `mode`, `detected`, `severity` (`none`/`low`/`medium`/`high`) và `message` — agent đọc các trường này để quyết định cảnh báo.
 
@@ -158,6 +161,34 @@ systemctl status railway-hermes-monitor
 
 **Yêu cầu trước khi chạy:** dashboard đang chạy (nguồn dữ liệu) + có `DASHBOARD_URL`, `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` trong `.env`. Biến cấu hình: `MONITOR_THRESHOLDS` (JSON ngưỡng theo loại), `MONITOR_COOLDOWN`, `CAMERA_IMAGE`/`CAMERA_REFERENCE` (để auto-detect khi vượt ngưỡng), `DETECT_PYTHON`.
 
+## Kho kiến thức (tra cứu quy trình / lịch bảo trì)
+
+Thư mục `knowledge/` chứa tài liệu Markdown để agent tra cứu khi được hỏi bằng tiếng Việt:
+
+- `quy-trinh-kiem-tra-ray.md` — quy trình kiểm tra ray, tà vẹt, nền đường, taluy
+- `lich-bao-tri.md` — lịch bảo trì định kỳ mẫu
+- `huong-dan-su-dung.md` — hướng dẫn người lao động dùng hệ thống
+
+Ví dụ: nhắn bot *"Quy trình kiểm tra ray đoạn km 1.245 đến 1.250?"* → agent đọc `knowledge/` và trả lời. Thêm tài liệu mới chỉ cần tạo file `.md` trong thư mục này — không cần sửa code.
+
+## Báo cáo tự động (hàng ngày/tuần)
+
+`auto_report.py` tổng hợp dữ liệu từ dashboard thành báo cáo gửi lãnh đạo:
+
+```bash
+python auto_report.py --period daily              # dùng LLM viết báo cáo
+python auto_report.py --period weekly --no-llm    # mẫu cố định, không tốn token
+python auto_report.py --period daily --to-telegram  # gửi thêm qua Telegram
+```
+
+Báo cáo lưu trong `reports/`. Cài định kỳ bằng systemd timer:
+
+```bash
+sudo cp deploy/railway-hermes-report.service deploy/railway-hermes-report.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now railway-hermes-report.timer   # chạy 06:00 mỗi ngày
+```
+
 ## Chạy Web UI (dễ debug)
 
 ```bash
@@ -195,14 +226,20 @@ railway-hermes-agent/
 │       ├── opencv-tool.ts
 │       ├── iot-http-tool.ts
 │       └── iot-mqtt-tool.ts
-├── detect_landslide.py                # script OpenCV mẫu
+├── detect_landslide.py                # script OpenCV (4 chế độ: camera/video/change/ảnh)
 ├── dashboard/                         # Dashboard Web UI (server + static)
 │   ├── server.py
 │   └── static/
+├── knowledge/                         # kho quy trình, lịch bảo trì (agent tra cứu)
+│   ├── quy-trinh-kiem-tra-ray.md
+│   ├── lich-bao-tri.md
+│   └── huong-dan-su-dung.md
 ├── hermes_agent_runner.py             # Python SDK runner
 ├── telegram_bot.py                    # Telegram bot: ra lệnh từ xa + trả lời
 ├── auto_monitor.py                    # vòng cảnh báo tự động (cron/systemd)
+├── auto_report.py                     # báo cáo giám sát định kỳ (LLM/template)
 ├── deploy/railway-hermes-monitor.service
+├── deploy/railway-hermes-report.service + .timer
 ├── generate-config.sh                 # sinh configs/generated-railway*.cordis.yml
 ├── requirements.txt
 └── .env.example

@@ -99,11 +99,12 @@ Lưu ý kỹ thuật quan trọng:
 
 ### 3.4 detect_landslide.py (thị giác máy tính)
 
-Script OpenCV thay thế heuristic demo bằng thuật toán thật, 3 chế độ:
+Script OpenCV thay thế heuristic demo bằng thuật toán thật, 4 chế độ:
 
 | Chế độ | Cơ chế | Dùng cho |
 |---|---|---|
-| `--video` | Frame differencing (sai khác khung liên tiếp) + ngưỡng + morphology + contour | Camera phát hiện chuyển động |
+| `--camera` (RTSP/device) | Đọc camera trực tiếp: frame differencing + định kỳ so baseline | Giám sát camera 24/7 |
+| `--video` | Frame differencing (sai khác khung liên tiếp) + ngưỡng + morphology + contour | Video ghi lại từ camera |
 | `--image + --reference` | So sánh ảnh hiện tại với ảnh baseline → vùng thay đổi | Đất đá tràn lấp, vật thể mới |
 | `--image` (đơn) | Chỉ thống kê (edge density, intensity) | Cảnh báo không đủ dữ liệu |
 
@@ -129,6 +130,16 @@ Các tính năng: ROI (giới hạn vùng quan tâm), `--min-area`/`--threshold`
 - Đọc cảm biến từ dashboard → so ngưỡng theo loại (`MONITOR_THRESHOLDS`) → khi vượt: chạy `detect_landslide.py` (nếu có `CAMERA_IMAGE`/`CAMERA_REFERENCE`) → gửi Telegram → ghi alert/detection lên dashboard.
 - **Cooldown** (`MONITOR_COOLDOWN`) chống gửi trùng; trạng thái lưu ở `dashboard/data/monitor_state.json`.
 - Hai chế độ: `--once` (cho cron) và `--interval N` (cho systemd).
+
+### 3.8 Kho kiến thức (`knowledge/`)
+
+Thư mục Markdown chứa **quy trình, lịch bảo trì, hướng dẫn sử dụng** để agent tra cứu bằng công cụ `read`/`grep`/`glob`. Người lao động hỏi bằng tiếng Việt tự nhiên ("Quy trình kiểm tra ray km 1.245?") → agent tìm nội dung trong `knowledge/` và trả lời theo tài liệu. Thêm tài liệu không cần sửa code.
+
+### 3.9 Báo cáo tự động (`auto_report.py`)
+
+- Định kỳ (hàng ngày/tuần) thu thập dữ liệu từ dashboard (cảm biến, cảnh báo, phát hiện).
+- Mặc định dùng **LLM** tổng hợp báo cáo tiếng Việt có cấu trúc; `--no-llm` dùng mẫu cố định (nhanh, không tốn token).
+- Lưu vào `reports/`, gửi Telegram nếu `--to-telegram`; cài lịch bằng systemd timer.
 
 ## 4. Luồng dữ liệu
 
@@ -230,7 +241,7 @@ Topic: `railway/sensors/<sensor_id>` — payload JSON:
 
 | Hạn chế | Hướng khắc phục |
 |---|---|
-| Dữ liệu cảm biến/camera đang là giả lập (chưa có phần cứng thật) | Kết nối ESP32 + cảm biến MPU6050 publish MQTT; camera thật + baseline |
+| Dữ liệu cảm biến/camera đang là giả lập (chưa có phần cứng thật) | Kết nối ESP32 + cảm biến MPU6050 publish MQTT; camera RTSP + baseline |
 | Dashboard lưu JSON bộ nhớ (giới hạn lịch sử) | Chuyển sang SQLite để lưu lịch sử dài hạn + biểu đồ |
 | Chưa có xác thực dashboard | Thêm reverse proxy + token |
 | Python SDK runner phụ thuộc native module runtime | Dùng đường headless (đã ổn định) hoặc cài runtime wheel đúng platform |

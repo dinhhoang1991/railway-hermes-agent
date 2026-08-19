@@ -131,7 +131,16 @@ mqtt.publish("railway/sensors/cam-ranh-01", payload.c_str());
 
 ### 6.2 Camera → OpenCV
 
-Trong `.env` đặt:
+**Cách A — giám sát camera trực tiếp (RTSP):** `detect_landslide.py` đọc trực tiếp
+luồng camera, vừa phát hiện chuyển động vừa so baseline định kỳ:
+
+```bash
+.venv/bin/python detect_landslide.py \
+  --camera rtsp://user:pass@cam-ip:554/stream \
+  --duration 60 --baseline-interval 15 --reference baseline.jpg
+```
+
+**Cách B — ảnh chụp định kỳ (cho auto_monitor):** đặt trong `.env`:
 
 ```env
 CAMERA_IMAGE=/path/to/camera/latest.jpg
@@ -150,16 +159,42 @@ CAMERA_REFERENCE=/path/to/camera/baseline.jpg
 # 2) Test phát hiện thay đổi (2 ảnh)
 .venv/bin/python detect_landslide.py --image now.jpg --reference baseline.jpg
 
-# 3) Test agent end-to-end (headless)
+# 3) Test camera (dùng video file làm nguồn, cùng code path RTSP)
+.venv/bin/python detect_landslide.py --camera test.mp4 --duration 5
+
+# 4) Test agent end-to-end (headless)
 cd deepseek-harness
 pnpm dsh --profile headless --patch ../configs/generated-railway.cordis.yml \
   "Liệt kê các tool bạn có. KHÔNG gửi Telegram."
 
-# 4) Test monitor một lượt
+# 5) Test monitor một lượt
 .venv/bin/python auto_monitor.py --once
+
+# 6) Test báo cáo (không LLM)
+.venv/bin/python auto_report.py --period daily --no-llm
 ```
 
-## 8. Khắc phục sự cố
+## 8. Kho kiến thức & báo cáo
+
+### 8.1 Kho kiến thức (tra cứu quy trình/lịch bảo trì)
+
+Thư mục `knowledge/` chứa tài liệu Markdown (quy trình kiểm tra ray, lịch bảo trì,
+hướng dẫn sử dụng). Agent tự tra cứu khi được hỏi — thêm tài liệu chỉ cần tạo file
+`.md`, không sửa code.
+
+### 8.2 Báo cáo định kỳ
+
+```bash
+# Chạy thử
+.venv/bin/python auto_report.py --period daily --no-llm
+
+# Cài lịch hàng ngày 06:00 (systemd timer)
+sudo cp deploy/railway-hermes-report.service deploy/railway-hermes-report.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now railway-hermes-report.timer
+```
+
+## 9. Khắc phục sự cố
 
 | Triệu chứng | Nguyên nhân / cách xử lý |
 |---|---|
@@ -171,8 +206,9 @@ pnpm dsh --profile headless --patch ../configs/generated-railway.cordis.yml \
 | Telegram `401 Unauthorized` | Token bot sai/hết hạn → tạo lại qua @BotFather |
 | Telegram `chat not found` | Chat id sai → nhắn `/start` cho bot rồi lấy qua `getUpdates` |
 | Dashboard không nhận MQTT | Cần chạy dashboard bằng Python có `amqtt`; kiểm tra `--mqtt` |
+| Agent báo `QUOTA: Insufficient Balance` | Tài khoản DeepSeek hết số dư → nạp credit (chỉ ảnh hưởng các tính năng gọi LLM) |
 
-## 9. Tài liệu liên quan
+## 10. Tài liệu liên quan
 
 - [Kiến trúc hệ thống](ARCHITECTURE.md)
 - [README](../README.md)

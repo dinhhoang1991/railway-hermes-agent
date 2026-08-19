@@ -2,17 +2,21 @@
 """
 Phát hiện chuyển động / sạt lở cho giám sát an toàn đường sắt.
 
-Cung cấp 3 chế độ phát hiện thật (không còn là heuristic demo):
+Cung cấp 4 chế độ phát hiện thật (không còn là heuristic demo):
 
 1. video motion     — phát hiện chuyển động thật bằng frame differencing
                       (sai khác giữa các khung hình liên tiếp) + contour.
    ``python detect_landslide.py --video path/to/cam.mp4``
 
-2. change detection — phát hiện thay đổi so với ảnh tham chiếu (đất/đá tràn
+2. camera (live)    — giám sát camera trực tiếp (rtsp://... hoặc device 0):
+                      vừa phát hiện chuyển động, vừa định kỳ so baseline.
+   ``python detect_landslide.py --camera rtsp://user:pass@host/stream --duration 30 --reference baseline.jpg``
+
+3. change detection — phát hiện thay đổi so với ảnh tham chiếu (đất/đá tràn
                       lấp, vật thể mới xuất hiện trên khu vực quan sát).
    ``python detect_landslide.py --image now.jpg --reference baseline.jpg``
 
-3. single image     — ảnh đơn chỉ trả về thống kê; KHÔNG đủ để kết luận
+4. single image     — ảnh đơn chỉ trả về thống kê; KHÔNG đủ để kết luận
                       chuyển động. Dùng khi chưa có nguồn video/ảnh tham chiếu.
    ``python detect_landslide.py --image path/to/image.jpg``
 
@@ -23,6 +27,8 @@ Tham số chính:
     --roi        vùng quan tâm, dạng "x1,y1;x2,y2;x3,y3;..." (polygon)
     --annotate   ghi ảnh/video đã đánh dấu vùng phát hiện
     --max-frames giới hạn số khung hình xử lý (video dài)
+    --duration   số giây giám sát camera (mặc định 30)
+    --baseline-interval  giây giữa 2 lần so baseline (mặc định 10)
 """
 
 from __future__ import annotations
@@ -30,6 +36,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -293,6 +300,121 @@ def detect_change(
     }
 
 
+# ============== Chế độ 2b: camera trực tiếp (RTSP / device) ==============
+
+def detect_motion_from_camera(
+    camera: str,
+    *,
+    duration: float,
+    diff_threshold: int,
+    min_area: int,
+    blur: int,
+    roi: np.ndarray | None,
+    reference: str | None,
+    baseline_interval: float,
+) -> dict[str, Any]:
+    """Giám sát camera (rtsp://... hoặc chỉ số device) trong `duration` giây.
+
+    Vừa phát hiện chuyển động (sai khác khung liên tiếp), vừa định kỳ so sánh
+    với ảnh baseline (`reference`) để phát hiện thay đổi/đất đá tràn lấp.
+    """
+    cap = cv2.VideoCapture(camera)
+    if not cap.isOpened():
+        return {"status": "error", "message": f"Không mở được camera: {camera}"}
+
+    fps = float(cap.get(cv2.CAP_PROP_FPS) or 25.0)
+    start = time.monotonic()
+    prev: np.ndarray | None = None
+    baseline_gray: np.ndarray | None = None
+    last_baseline_check = -baseline_interval
+    events: list[dict[str, Any]] = []
+    change_events: list[dict[str, Any]] = []
+    frame_idx = 0
+    frame_size = 0
+    max_ratio = 0.0
+
+    if reference:
+        baseline_gray = read_gray(reference, blur, roi)
+        if baseline_gray is None:
+            cap.release()
+            return {"status": "error", "message": f"Không đọc được ảnh tham chiếu: {reference}"}
+
+    while time.monotonic() - start < duration:
+        ok, frame = cap.read()
+        if not ok:
+            break
+        now = time.monotonic()
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.GaussianBlur(gray, (blur, blur), 0)
+        gray = apply_roi(gray, roi)
+        if frame_size == 0:
+            frame_size = int(gray.size)
+
+        # 1) Chuyển động: sai khác giữa khung liên tiếp
+        if prev is not None:
+            diff = cv2.absdiff(prev, gray)
+            regions, mask = _motion_regions(diff, diff_threshold, min_area)
+            ratio = int(cv2.countNonZero(mask)) / frame_size if frame_size else 0.0
+            max_ratio = max(max_ratio, ratio)
+            if regions:
+                events.append({
+                    "time_sec": round(now - start, 2),
+                    "region_count": len(regions),
+                    "motion_ratio": round(ratio, 5),
+                    "regions": regions,
+                })
+
+        # 2) Thay đổi so với baseline (định kỳ)
+        if baseline_gray is not None and now - last_baseline_check >= baseline_interval:
+            if gray.shape == baseline_gray.shape:
+                bdiff = cv2.absdiff(baseline_gray, gray)
+                bregions, bmask = _motion_regions(bdiff, diff_threshold, min_area)
+                bratio = int(cv2.countNonZero(bmask)) / bmask.size if bmask.size else 0.0
+                if bregions:
+                    change_events.append({
+                        "time_sec": round(now - start, 2),
+                        "change_ratio": round(bratio, 5),
+                        "regions": bregions,
+                    })
+            last_baseline_check = now
+
+        prev = gray
+        frame_idx += 1
+
+    cap.release()
+
+    detected = bool(events) or bool(change_events)
+    combined = max(
+        max_ratio,
+        max((e.get("change_ratio", 0.0) for e in change_events), default=0.0),
+    )
+    return {
+        "status": "ok",
+        "mode": "camera",
+        "input": camera,
+        "detected": detected,
+        "severity": _severity(combined),
+        "settings": {
+            "diff_threshold": diff_threshold, "min_area": min_area, "blur": blur,
+            "roi": bool(roi is not None), "duration": duration, "fps": fps,
+            "frames_processed": frame_idx, "reference": bool(reference is not None),
+            "baseline_interval": baseline_interval,
+        },
+        "summary": {
+            "motion_events": len(events),
+            "change_events": len(change_events),
+            "max_ratio": round(combined, 5),
+        },
+        "motion": events,
+        "changes": change_events,
+        "message": (
+            f"Phát hiện bất thường: {len(events)} sự kiện chuyển động, "
+            f"{len(change_events)} lần thay đổi so với baseline" if detected
+            else "Không phát hiện bất thường trong khoảng giám sát"
+        ),
+    }
+
+
 # ==================== Chế độ 3: single image ====================
 
 def analyze_single_image(image_path: str, blur: int, roi: np.ndarray | None) -> dict[str, Any]:
@@ -324,6 +446,10 @@ def main(argv: Iterable[str] | None = None) -> None:
     )
     parser.add_argument("--image", help="Đường dẫn ảnh cần phân tích")
     parser.add_argument("--video", help="Đường dẫn video cần phân tích chuyển động")
+    parser.add_argument("--camera", help="URL camera (rtsp://...) hoặc chỉ số device (0 = webcam)")
+    parser.add_argument("--duration", type=float, default=30.0, help="Số giây giám sát camera (mặc định 30)")
+    parser.add_argument("--baseline-interval", type=float, default=10.0,
+                        help="Giây giữa 2 lần so sánh baseline khi dùng camera (mặc định 10)")
     parser.add_argument("--reference", help="Ảnh tham chiếu (baseline) để phát hiện thay đổi")
     parser.add_argument("--threshold", type=int, default=25,
                         help="Ngưỡng sai khác xám 0-255 (mặc định 25; càng nhỏ càng nhạy)")
@@ -337,11 +463,11 @@ def main(argv: Iterable[str] | None = None) -> None:
     parser.add_argument("--save-result", action="store_true", help="Lưu kết quả JSON cạnh file đầu vào")
     args = parser.parse_args(argv)
 
-    if not args.image and not args.video:
-        parser.error("cần ít nhất một trong --image hoặc --video")
+    if not args.image and not args.video and not args.camera:
+        parser.error("cần ít nhất một trong --image, --video hoặc --camera")
 
-    if args.reference and not args.image:
-        parser.error("--reference chỉ dùng kèm với --image")
+    if args.reference and not args.image and not args.camera:
+        parser.error("--reference chỉ dùng kèm với --image hoặc --camera")
 
     roi = parse_roi(args.roi)
 
@@ -356,6 +482,18 @@ def main(argv: Iterable[str] | None = None) -> None:
             annotate=args.annotate,
         )
         base_path = Path(args.video)
+    elif args.camera:
+        result = detect_motion_from_camera(
+            args.camera,
+            duration=args.duration,
+            diff_threshold=args.threshold,
+            min_area=args.min_area,
+            blur=args.blur,
+            roi=roi,
+            reference=args.reference,
+            baseline_interval=args.baseline_interval,
+        )
+        base_path = Path("camera")
     elif args.reference:
         result = detect_change(
             args.reference,

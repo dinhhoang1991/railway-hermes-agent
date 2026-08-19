@@ -1,0 +1,13 @@
+[Unit]
+Description=Railway Hermes Auto Report (báo cáo giám sát định kỳ)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Sửa 2 đường dẫn cho khớp máy triển khai:
+WorkingDirectory=/path/to/railway-hermes-agent
+ExecStart=/path/to/railway-hermes-agent/.venv/bin/python auto_report.py --period daily --to-telegram
+
+[Install]
+WantedBy=multi-user.target

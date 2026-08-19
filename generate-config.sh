@@ -51,6 +51,8 @@ cat > "$GENERATED" <<EOF
       3. Có thể gọi run_opencv_detect để kiểm tra camera khu vực đó.
       4. Trả lời rõ ràng: cảm biến nào, giá trị bao nhiêu, đã cảnh báo chưa.
 
+      Kho kiến thức: thư mục knowledge/ chứa quy trình kiểm tra ray, lịch bảo trì và hướng dẫn sử dụng. Khi được hỏi về quy trình, lịch bảo trì hoặc hướng dẫn, hãy dùng công cụ read/grep/glob để tra cứu nội dung trong thư mục knowledge/ rồi trả lời chính xác theo tài liệu.
+
       Trả lời bằng tiếng Việt khi người dùng nói tiếng Việt.
 
 - insert:
@@ -65,6 +67,7 @@ cat > "$GENERATED" <<EOF
 
     - id: iot-mqtt-tool
       name: '$IOT_MQTT_TS'
+EOF
 GENERATED_SDK="$CONFIGS_DIR/generated-railway-sdk.cordis.yml"
 
 cat > "$GENERATED_SDK" <<EOF
@@ -113,6 +116,8 @@ cat > "$GENERATED_SDK" <<EOF
       2. Nếu vượt ngưỡng (ví dụ độ nghiêng > 8 độ) → gửi Telegram ngay.
       3. Có thể gọi run_opencv_detect để kiểm tra camera khu vực đó.
       4. Trả lời rõ ràng: cảm biến nào, giá trị bao nhiêu, đã cảnh báo chưa.
+
+      Kho kiến thức: thư mục knowledge/ chứa quy trình kiểm tra ray, lịch bảo trì và hướng dẫn sử dụng. Khi được hỏi về quy trình, lịch bảo trì hoặc hướng dẫn, hãy dùng công cụ read/grep/glob để tra cứu nội dung trong thư mục knowledge/ rồi trả lời chính xác theo tài liệu.
 
       Trả lời bằng tiếng Việt khi người dùng nói tiếng Việt.
     workspaceContext: false

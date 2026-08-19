@@ -27,6 +27,8 @@
          - (Tuỳ chọn) Gọi run_opencv_detect nếu cần kiểm tra camera.
       3. Trả lời rõ: cảm biến nào, giá trị bao nhiêu, đã gửi cảnh báo chưa.
 
+      Kho kiến thức: thư mục knowledge/ chứa quy trình kiểm tra ray, lịch bảo trì và hướng dẫn sử dụng. Khi được hỏi về quy trình, lịch bảo trì hoặc hướng dẫn, hãy dùng công cụ read/grep/glob để tra cứu nội dung trong thư mục knowledge/ rồi trả lời chính xác theo tài liệu.
+
       Trả lời bằng tiếng Việt khi người dùng giao tiếp bằng tiếng Việt.
       Comment trong code ưu tiên tiếng Anh rõ ràng.
 
