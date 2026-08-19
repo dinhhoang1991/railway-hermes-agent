@@ -208,6 +208,7 @@ sudo systemctl enable --now railway-hermes-report.timer
 | Dashboard không nhận MQTT | Cần chạy dashboard bằng Python có `amqtt`; kiểm tra `--mqtt` |
 | Agent báo `QUOTA: Insufficient Balance` | Tài khoản DeepSeek hết số dư → nạp credit (chỉ ảnh hưởng các tính năng gọi LLM) |
 | Gửi PDF cho bot nhưng không trích xuất được văn bản | Thiếu pypdf → `pip install pypdf`; PDF scan không có text |
+| Gửi PDF cho bot báo `file is too big` / vượt 20 MB | Nén trước khi gửi: `pip install pymupdf` rồi `python scripts/compress_pdf.py <file.pdf>` |
 
 ## 10. Tài liệu liên quan
 

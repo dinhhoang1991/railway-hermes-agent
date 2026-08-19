@@ -126,6 +126,7 @@ python telegram_bot.py
 
 - Nhắn bất kỳ lệnh nào: *"kiểm tra cảm biến"*, *"cập nhật cảm biến cam-ranh-01 độ nghiêng 12 độ"*, *"chạy detect ảnh ..."*
 - Gửi **file PDF** → bot tải về, trích xuất văn bản và lưu vào `knowledge/` để agent tra cứu (cần `pip install pypdf`)
+- File > 20 MB: Telegram giới hạn bot không tải được → nén trước bằng `python scripts/compress_pdf.py <file.pdf>` (cần `pip install pymupdf`)
 - `/status` — trạng thái cảm biến nhanh (qua dashboard REST, nếu có `DASHBOARD_URL`)
 - `/help` — hướng dẫn
 - **Bảo mật:** mặc định chỉ chủ sở hữu (`TELEGRAM_CHAT_ID`) được ra lệnh; bot trong group phải đặt `ALLOWED_USER_IDS="id1,id2"` trong `.env`

@@ -258,14 +258,19 @@ def handle_document(message: dict[str, Any]) -> str:
     doc = message.get("document") or {}
     mime = doc.get("mime_type", "")
     if mime and mime != "application/pdf":
-        return "⚠️ Hiện bot chỉ hỗ trợ file PDF. Hãy gửi file .pdf."
+        return f"⚠️ Hiện bot chỉ hỗ trợ file PDF (nhận được mime {mime})."
     file_id = doc.get("file_id")
     file_name = doc.get("file_name") or "document.pdf"
+    file_size = doc.get("file_size")
     if not file_id:
         return "❌ Không nhận được file."
     try:
         gf = tg_call("getFile", {"file_id": file_id})
         file_path = gf["result"]["file_path"]
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", "replace")
+        hint = _size_hint(body, file_name, file_size)
+        return f"❌ Không lấy được thông tin file (HTTP {exc.code}): {body}{hint}"
     except Exception as exc:  # noqa: BLE001
         return f"❌ Không lấy được thông tin file: {exc}"
     try:
@@ -273,9 +278,21 @@ def handle_document(message: dict[str, Any]) -> str:
             f"https://api.telegram.org/file/bot{TOKEN}/{file_path}", timeout=120
         ) as resp:
             data = resp.read()
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", "replace")
+        hint = _size_hint(body, file_name, file_size)
+        return f"❌ Tải file thất bại (HTTP {exc.code}): {body}{hint}"
     except Exception as exc:  # noqa: BLE001
         return f"❌ Tải file thất bại: {exc}"
     return process_pdf(data, file_name)
+
+
+def _size_hint(body: str, file_name: str, file_size: int | None) -> str:
+    """Thêm gợi ý nén nếu lỗi liên quan tới kích thước file (> 20 MB)."""
+    if "too big" in body.lower() or "too large" in body.lower():
+        return (f"\nℹ️ File {file_name} ({file_size} bytes) vượt giới hạn 20 MB của bot.\n"
+                "Hãy nén trước khi gửi: python scripts/compress_pdf.py <file.pdf>")
+    return ""
 
 
 def poll_loop() -> None:
