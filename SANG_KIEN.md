@@ -35,7 +35,7 @@ Cải tiến kỹ thuật – Quản lý – Ứng dụng công nghệ số và 
 
 | Công nghệ | Mô tả chính xác | Thành phần mã nguồn |
 |---|---|---|
-| AI Agent | Railway Hermes Agent chạy trên **DeepSeek Harness + DeepSeek-V4-Pro**, system prompt tối ưu ngữ cảnh Cam Ranh – Khánh Hòa | `configs/railway-coding.cordis.yml`, `generate-config.sh` |
+| AI Agent | Railway Hermes Agent chạy trên **DeepSeek Harness + DeepSeek-V4-Pro**, system prompt tối ưu ngữ cảnh Khánh Hòa | `configs/railway-coding.cordis.yml`, `generate-config.sh` |
 | Tool tùy biến | 4 plugin TypeScript cung cấp **8 tool**: `send_telegram`, `run_opencv_detect`, `http_*` (3), `mqtt_*` (3) | `plugins/src/*.ts` |
 | Computer Vision | OpenCV, **4 chế độ thật**: camera (RTSP/device), video (frame differencing), change detection (so baseline), ảnh đơn | `detect_landslide.py` |
 | IoT | MQTT real-time (`railway/sensors/#`) + HTTP cache; mô hình JSON `{sensor_id, value, type, unit}` | `plugins/src/iot-mqtt-tool.ts`, `iot-http-tool.ts`, `dashboard/server.py` |
