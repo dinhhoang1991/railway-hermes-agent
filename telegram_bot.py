@@ -229,6 +229,31 @@ def extract_pdf_text(data: bytes) -> tuple[str | None, int]:
     return (text or None), len(reader.pages)
 
 
+def ocr_pdf_text(data: bytes) -> str | None:
+    """OCR toàn bộ trang PDF ảnh scan (cần tesseract + vie + pytesseract + pymupdf).
+
+    Ném ImportError nếu thiếu thư viện Python; ném ngoại lệ khác nếu thiếu
+    tesseract hoặc lỗi nhận dạng.
+    """
+    import io
+
+    import pymupdf
+    import pytesseract
+    from PIL import Image
+
+    doc = pymupdf.open(stream=data, filetype="pdf")
+    parts: list[str] = []
+    try:
+        for page in doc:
+            pix = page.get_pixmap(dpi=200)
+            img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+            parts.append(pytesseract.image_to_string(img, lang="vie").strip())
+    finally:
+        doc.close()
+    text = "\n\n".join(p for p in parts if p).strip()
+    return text or None
+
+
 def process_pdf(data: bytes, file_name: str) -> str:
     """Lưu PDF vào knowledge/uploads/ và trích xuất text vào knowledge/<tên>.md."""
     name = sanitize_filename(file_name)
@@ -243,14 +268,28 @@ def process_pdf(data: bytes, file_name: str) -> str:
     except Exception as exc:  # noqa: BLE001 - PDF lạ/scan; báo cho người dùng là đủ
         return f"✅ Đã lưu file {name} (không trích xuất được văn bản: {exc})"
 
+    source = "trích xuất"
     if not text:
-        return f"✅ Đã lưu file {name} ({pages} trang) — PDF không có văn bản (có thể là ảnh scan)."
+        # PDF không có text layer → thử OCR (cho tài liệu scan)
+        try:
+            text = ocr_pdf_text(data)
+            source = "OCR"
+        except ImportError:
+            return (f"✅ Đã lưu file {name} ({pages} trang, ảnh scan).\n"
+                    "⚠️ Chưa đọc được chữ vì thiếu OCR — chạy:\n"
+                    "   pip install pytesseract pymupdf pillow")
+        except Exception as exc:  # noqa: BLE001 - thường là thiếu tesseract/vie
+            return (f"✅ Đã lưu file {name} ({pages} trang, ảnh scan).\n"
+                    f"⚠️ OCR thất bại ({exc}). Cần cài tesseract tiếng Việt:\n"
+                    "   sudo apt install tesseract-ocr tesseract-ocr-vie")
+        if not text:
+            return f"✅ Đã lưu file {name} ({pages} trang) — ảnh scan và OCR không nhận được chữ."
 
     md_name = Path(name).stem + ".md"
-    header = f"# {Path(name).stem}\n\n> Tài liệu trích xuất tự động từ PDF ({pages} trang).\n\n"
+    header = f"# {Path(name).stem}\n\n> Tài liệu {source} tự động từ PDF ({pages} trang).\n\n"
     (KNOWLEDGE_DIR / md_name).write_text(header + text, encoding="utf-8")
-    return (f"✅ Đã nhận tài liệu {name} ({pages} trang, {len(text)} ký tự).\n"
-            f"Đã trích xuất vào knowledge/{md_name} — bạn có thể hỏi agent về nội dung này.")
+    return (f"✅ Đã nhận tài liệu {name} ({pages} trang, {len(text)} ký tự qua {source}).\n"
+            f"Đã lưu vào knowledge/{md_name} — bạn có thể hỏi agent về nội dung này.")
 
 
 def handle_document(message: dict[str, Any]) -> str:
