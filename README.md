@@ -12,7 +12,7 @@ Agent lập trình thông minh hỗ trợ hệ thống giám sát an toàn đư�
                            [AI Agent (4 tool)] ◀── lệnh tiếng Việt ── [Telegram Bot] ◀── bạn
 ```
 
-📚 **Tài liệu:** [Kiến trúc hệ thống](docs/ARCHITECTURE.md) · [Hướng dẫn triển khai](docs/DEPLOYMENT.md)
+📚 **Tài liệu:** [Bản sáng kiến](SANG_KIEN.md) · [Kiến trúc hệ thống](docs/ARCHITECTURE.md) · [Hướng dẫn triển khai](docs/DEPLOYMENT.md)
 
 ## Tính năng chính
 
