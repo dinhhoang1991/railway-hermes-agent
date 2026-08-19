@@ -11,7 +11,7 @@
 
 ## TÁC GIẢ
 
-Cá nhân thuộc Đội đường sắt Cam Ranh (mã nguồn mở: https://github.com/dinhhoang1991/railway-hermes-agent).
+Cá nhân (mã nguồn mở: https://github.com/dinhhoang1991/railway-hermes-agent).
 
 ## LĨNH VỰC ÁP DỤNG
 
