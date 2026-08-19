@@ -21,6 +21,11 @@ Lệnh nhanh (không cần agent):
     /status    trạng thái cảm biến (đọc từ dashboard REST API nếu có
                DASHBOARD_URL, ngược lại từ agent)
 
+Gửi tài liệu:
+    Gửi file PDF cho bot → bot tải về, trích xuất văn bản và lưu vào
+    knowledge/ (file gốc ở knowledge/uploads/). Cần cài pypdf
+    (pip install pypdf) để trích xuất văn bản.
+
 Chạy:
     python telegram_bot.py
 """
@@ -44,6 +49,8 @@ CONFIG = Path(os.getenv("HARNESS_CONFIG", BASE / "configs" / "generated-railway.
 POLL_INTERVAL = float(os.getenv("BOT_POLL_INTERVAL", "2"))
 AGENT_TIMEOUT = int(os.getenv("AGENT_TIMEOUT", "600"))
 MAX_REPLY = 4000  # Telegram giới hạn 4096 ký tự/tin
+KNOWLEDGE_DIR = BASE / "knowledge"
+UPLOADS_DIR = KNOWLEDGE_DIR / "uploads"
 
 
 def load_env() -> tuple[dict[str, str], dict[str, str]]:
@@ -203,6 +210,74 @@ def handle_message(chat_id: int, user_id: int, text: str) -> str:
     return run_agent(text)
 
 
+def sanitize_filename(name: str) -> str:
+    """Làm sạch tên file tải lên (bỏ đường dẫn, ký tự lạ)."""
+    name = name.replace("\\", "/").split("/")[-1]
+    name = re.sub(r"[^\w.\- ]", "_", name, flags=re.UNICODE).strip() or "document.pdf"
+    if not name.lower().endswith(".pdf"):
+        name += ".pdf"
+    return name
+
+
+def extract_pdf_text(data: bytes) -> tuple[str | None, int]:
+    """Trích xuất văn bản từ PDF. Trả (text, số trang); ném ImportError nếu thiếu pypdf."""
+    import io
+    from pypdf import PdfReader
+    reader = PdfReader(io.BytesIO(data))
+    parts = [page.extract_text() or "" for page in reader.pages]
+    text = "\n\n".join(p.strip() for p in parts if p.strip()).strip()
+    return (text or None), len(reader.pages)
+
+
+def process_pdf(data: bytes, file_name: str) -> str:
+    """Lưu PDF vào knowledge/uploads/ và trích xuất text vào knowledge/<tên>.md."""
+    name = sanitize_filename(file_name)
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    (UPLOADS_DIR / name).write_bytes(data)
+
+    try:
+        text, pages = extract_pdf_text(data)
+    except ImportError:
+        return (f"✅ Đã lưu file {name} vào knowledge/uploads/.\n"
+                "⚠️ Chưa trích xuất văn bản vì thiếu pypdf — chạy: pip install pypdf")
+    except Exception as exc:  # noqa: BLE001 - PDF lạ/scan; báo cho người dùng là đủ
+        return f"✅ Đã lưu file {name} (không trích xuất được văn bản: {exc})"
+
+    if not text:
+        return f"✅ Đã lưu file {name} ({pages} trang) — PDF không có văn bản (có thể là ảnh scan)."
+
+    md_name = Path(name).stem + ".md"
+    header = f"# {Path(name).stem}\n\n> Tài liệu trích xuất tự động từ PDF ({pages} trang).\n\n"
+    (KNOWLEDGE_DIR / md_name).write_text(header + text, encoding="utf-8")
+    return (f"✅ Đã nhận tài liệu {name} ({pages} trang, {len(text)} ký tự).\n"
+            f"Đã trích xuất vào knowledge/{md_name} — bạn có thể hỏi agent về nội dung này.")
+
+
+def handle_document(message: dict[str, Any]) -> str:
+    """Tải file PDF từ Telegram và xử lý lưu trữ + trích xuất."""
+    doc = message.get("document") or {}
+    mime = doc.get("mime_type", "")
+    if mime and mime != "application/pdf":
+        return "⚠️ Hiện bot chỉ hỗ trợ file PDF. Hãy gửi file .pdf."
+    file_id = doc.get("file_id")
+    file_name = doc.get("file_name") or "document.pdf"
+    if not file_id:
+        return "❌ Không nhận được file."
+    try:
+        gf = tg_call("getFile", {"file_id": file_id})
+        file_path = gf["result"]["file_path"]
+    except Exception as exc:  # noqa: BLE001
+        return f"❌ Không lấy được thông tin file: {exc}"
+    try:
+        with urllib.request.urlopen(
+            f"https://api.telegram.org/file/bot{TOKEN}/{file_path}", timeout=120
+        ) as resp:
+            data = resp.read()
+    except Exception as exc:  # noqa: BLE001
+        return f"❌ Tải file thất bại: {exc}"
+    return process_pdf(data, file_name)
+
+
 def poll_loop() -> None:
     offset = 0
     print("[bot] Railway Hermes Bot đang chạy. Chờ lệnh Telegram...")
@@ -216,10 +291,28 @@ def poll_loop() -> None:
         for update in updates.get("result", []):
             offset = update["update_id"] + 1
             message = update.get("message") or {}
-            text = (message.get("text") or "").strip()
             chat_id = (message.get("chat") or {}).get("id")
             user_id = (message.get("from") or {}).get("id")
-            if not text or chat_id is None or user_id is None:
+            if chat_id is None or user_id is None:
+                continue
+
+            # Tin nhắn file (PDF) — tải + trích xuất + lưu vào knowledge/
+            if message.get("document"):
+                if not is_authorized(user_id):
+                    send_message(chat_id, "⛔ Bạn không có quyền gửi tài liệu cho bot này.")
+                    continue
+                caption = (message.get("caption") or "").strip()
+                print(f"[bot] File từ {user_id}: {message['document'].get('file_name')}")
+                send_message(chat_id, "⏳ Đang tải & xử lý tài liệu...")
+                reply = handle_document(message)
+                if caption:
+                    reply += f"\n\nYêu cầu kèm theo: “{caption}” — nhắn lại yêu cầu để agent xử lý trên tài liệu vừa lưu."
+                send_message(chat_id, reply)
+                print(f"[bot] Đã xử lý file, trả lời {len(reply)} ký tự.")
+                continue
+
+            text = (message.get("text") or "").strip()
+            if not text:
                 continue
             print(f"[bot] Lệnh từ {user_id}: {text[:80]}")
             send_message(chat_id, "⏳ Đang xử lý, chờ chút...")

@@ -12,6 +12,7 @@ configs/generated-railway-sdk.cordis.yml
 sessions/
 dashboard/data/
 reports/
+knowledge/uploads/
 *.log
 
 # OS / IDE

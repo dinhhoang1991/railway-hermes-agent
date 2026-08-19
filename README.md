@@ -125,6 +125,7 @@ python telegram_bot.py
 ```
 
 - Nhắn bất kỳ lệnh nào: *"kiểm tra cảm biến"*, *"cập nhật cảm biến cam-ranh-01 độ nghiêng 12 độ"*, *"chạy detect ảnh ..."*
+- Gửi **file PDF** → bot tải về, trích xuất văn bản và lưu vào `knowledge/` để agent tra cứu (cần `pip install pypdf`)
 - `/status` — trạng thái cảm biến nhanh (qua dashboard REST, nếu có `DASHBOARD_URL`)
 - `/help` — hướng dẫn
 - **Bảo mật:** mặc định chỉ chủ sở hữu (`TELEGRAM_CHAT_ID`) được ra lệnh; bot trong group phải đặt `ALLOWED_USER_IDS="id1,id2"` trong `.env`
@@ -169,7 +170,7 @@ Thư mục `knowledge/` chứa tài liệu Markdown để agent tra cứu khi đ
 - `lich-bao-tri.md` — lịch bảo trì định kỳ mẫu
 - `huong-dan-su-dung.md` — hướng dẫn người lao động dùng hệ thống
 
-Ví dụ: nhắn bot *"Quy trình kiểm tra ray đoạn km 1.245 đến 1.250?"* → agent đọc `knowledge/` và trả lời. Thêm tài liệu mới chỉ cần tạo file `.md` trong thư mục này — không cần sửa code.
+Ví dụ: nhắn bot *"Quy trình kiểm tra ray đoạn km 1.245 đến 1.250?"* → agent đọc `knowledge/` và trả lời. Thêm tài liệu mới chỉ cần tạo file `.md` trong thư mục này, hoặc **gửi file PDF cho bot** (bot tự trích xuất và lưu vào `knowledge/`) — không cần sửa code.
 
 ## Báo cáo tự động (hàng ngày/tuần)
 

@@ -12,7 +12,9 @@ Telegram, ví dụ:
 
 1. Tạo file Markdown (`.md`) trong thư mục này, đặt tên rõ nghĩa.
 2. Ghi nội dung theo cấu trúc có tiêu đề (`##`) để agent dễ đọc.
-3. Không cần sửa code — agent dùng công cụ `read`/`grep`/`glob` để tìm nội dung.
+3. Hoặc **gửi file PDF cho Telegram bot** — bot tự tải về, trích xuất văn bản
+   và lưu thành file `.md` tại đây (file PDF gốc lưu ở `knowledge/uploads/`).
+4. Không cần sửa code — agent dùng công cụ `read`/`grep`/`glob` để tìm nội dung.
 
 ## Các file hiện có
 

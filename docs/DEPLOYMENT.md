@@ -207,6 +207,7 @@ sudo systemctl enable --now railway-hermes-report.timer
 | Telegram `chat not found` | Chat id sai → nhắn `/start` cho bot rồi lấy qua `getUpdates` |
 | Dashboard không nhận MQTT | Cần chạy dashboard bằng Python có `amqtt`; kiểm tra `--mqtt` |
 | Agent báo `QUOTA: Insufficient Balance` | Tài khoản DeepSeek hết số dư → nạp credit (chỉ ảnh hưởng các tính năng gọi LLM) |
+| Gửi PDF cho bot nhưng không trích xuất được văn bản | Thiếu pypdf → `pip install pypdf`; PDF scan không có text |
 
 ## 10. Tài liệu liên quan
 
