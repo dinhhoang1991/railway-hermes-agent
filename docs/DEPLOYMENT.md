@@ -210,6 +210,7 @@ sudo systemctl enable --now railway-hermes-report.timer
 | Gửi PDF cho bot nhưng không trích xuất được văn bản | Thiếu pypdf → `pip install pypdf`; PDF scan không có text |
 | Gửi PDF cho bot báo `file is too big` / vượt 20 MB | Nén trước khi gửi: `pip install pymupdf` rồi `python scripts/compress_pdf.py <file.pdf>` |
 | PDF ảnh scan không trích xuất được chữ | Cài OCR: `sudo apt install tesseract-ocr tesseract-ocr-vie` + `pip install pytesseract pymupdf pillow` |
+| `pnpm run build` báo `heap out of memory` | Máy thiếu RAM — build harness cần ≥ 4GB RAM; tăng `NODE_OPTIONS=--max-old-space-size=4096` hoặc build trên máy mạnh hơn |
 
 ## 10. Tài liệu liên quan
 
